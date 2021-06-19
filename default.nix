@@ -1,6 +1,8 @@
 { pkgs ? import <nixpkgs> {}
 # Choose one of "pyproject" or "poetry"
 , format ? "pyproject"
+# Build LaTeX manual -- will download the full texlive if enabled
+, buildUserManual ? false
 # Supply --argstr productKey CODE to download
 , productKey ? null
 }:
@@ -13,9 +15,11 @@ let
 
   pkg =
     { lib, fetchzip, pkgconfig, makeDesktopItem
-    , xorg, qt5, libXinerama
+    , xorg, qt5, libXinerama, libxkbcommon, xkeyboardconfig
+    , libsForQt5
     , buildPythonApplication, pytest, pyside2, pyside2-tools
-    , paramiko, pdfrw, qtpy, pillow }:
+    , paramiko, pdfrw, qtpy, pillow
+    , texlive, pygments, which }:
 
     buildPythonApplication rec {
       inherit pname name version format;
@@ -55,24 +59,37 @@ let
 
         cp --no-preserve=all ${./setup.cfg} setup.cfg
         cp --no-preserve=all ${./pyproject.toml} pyproject.toml
-        rm -f Makefile Make-win.bat
+
+        sed -i 's|src/|rcu/|g' Makefile
       '';
 
       nativeBuildInputs = [
         pkgconfig
         pyside2-tools
         qt5.wrapQtAppsHook
+      ] ++ lib.optionals buildUserManual [
+        texlive.combined.scheme-full
+        pygments
+        which
       ];
-      buildInputs = [ pyside2-tools ];
 
-      propagatedBuildInputs = [
-        xorg.libxcb
+      buildInputs = [ pyside2-tools ]
+          ++ [ xorg.libxcb ]
+          ++ (with libsForQt5; [ qtx11extras ]);
+
+      LD_LIBRARY_PATH = lib.makeLibraryPath xlibs;
+ 
+      xlibs = [
         xorg.libxcb
         xorg.xcbproto
         xorg.xcbutil
         xorg.xcbutilwm
+        xorg.libXinerama
+        libxkbcommon
         libXinerama
+      ];
 
+      propagatedBuildInputs = xlibs ++ [
         pyside2
         paramiko
         pdfrw
@@ -82,19 +99,28 @@ let
 
       checkInputs = [ pytest ];
       doCheck = false;
-
+      
       # Prevent double-wrapping with python and qt
       # https://nixos.org/manual/nixpkgs/stable/#ssec-gnome-common-issues-double-wrapped
       dontWrapQtApps = true;
       preFixup = ''
+        # Wayland support is broken.
+        qtWrapperArgs+=(--set QT_QPA_PLATFORM xcb)
+        qtWrapperArgs+=(--set QT_XKB_CONFIG_ROOT "${xkeyboardconfig}/share/X11/xkb")
+
+        # Add QT wrapper args to Python wrapper args
         makeWrapperArgs+=("''${qtWrapperArgs[@]}")
+      '';
+      QT_QPA_PLATFORM_PLUGIN_PATH = "${qt5.qtbase.bin}/lib/qt-${qt5.qtbase.version}/plugins";
+
+      postBuild = lib.optionalString buildUserManual ''
+        make doc
       '';
 
       postInstall = ''
         mkdir -p $out/share/applications
         cp -v $desktopItem/share/applications/* $out/share/applications
-
-        # install -D 'User Manual.pdf' $out/share/doc/rcu/user-manual.pdf
+        
         for size in 64 128 256 512; do
           name="''${size}x$size"
           target=$out/share/icons/hicolor/$name/apps
@@ -104,6 +130,8 @@ let
             test -f $prefix-withpen.$fmt && install -D $prefix-withpen.$fmt $target/rcu-withpen.$fmt || true
           done
         done
+      '' + lib.optionalString buildUserManual ''
+        install -D manual/manual.pdf $out/share/doc/rcu/manual.pdf
       '';
 
       desktopItem = makeDesktopItem {
