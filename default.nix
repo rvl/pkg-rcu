@@ -15,8 +15,7 @@ let
 
   pkg =
     { lib, fetchzip, pkgconfig, makeDesktopItem
-    , xorg, qt5, libXinerama, libxkbcommon, xkeyboardconfig
-    , libsForQt5
+    , xorg, qt5, libXinerama, libxkbcommon
     , buildPythonApplication, pytest, pyside2, pyside2-tools
     , paramiko, pdfrw, qtpy, pillow
     , texlive, pygments, which }:
@@ -73,13 +72,9 @@ let
         which
       ];
 
-      buildInputs = [ pyside2-tools ]
-          ++ [ xorg.libxcb ]
-          ++ (with libsForQt5; [ qtx11extras ]);
-
-      LD_LIBRARY_PATH = lib.makeLibraryPath xlibs;
+      buildInputs = [ pyside2-tools ];
  
-      xlibs = [
+      propagatedBuildInputs = [
         xorg.libxcb
         xorg.xcbproto
         xorg.xcbutil
@@ -87,9 +82,7 @@ let
         xorg.libXinerama
         libxkbcommon
         libXinerama
-      ];
 
-      propagatedBuildInputs = xlibs ++ [
         pyside2
         paramiko
         pdfrw
@@ -97,25 +90,36 @@ let
         pillow
       ];
 
+      postBuild = lib.optionalString buildUserManual ''
+        make doc
+      '';
+
       checkInputs = [ pytest ];
       doCheck = false;
       
+      # Prevents this error in the nix-shell:
+      #   qt.qpa.plugin: Could not find the Qt platform plugin "xcb" in ""
+      QT_QPA_PLATFORM_PLUGIN_PATH = "${qt5.qtbase.bin}/lib/qt-${qt5.qtbase.version}/plugins";
+
       # Prevent double-wrapping with python and qt
       # https://nixos.org/manual/nixpkgs/stable/#ssec-gnome-common-issues-double-wrapped
       dontWrapQtApps = true;
       preFixup = ''
         # Wayland support is broken.
         qtWrapperArgs+=(--set QT_QPA_PLATFORM xcb)
-        qtWrapperArgs+=(--set QT_XKB_CONFIG_ROOT "${xkeyboardconfig}/share/X11/xkb")
 
         # Add QT wrapper args to Python wrapper args
         makeWrapperArgs+=("''${qtWrapperArgs[@]}")
       '';
-      QT_QPA_PLATFORM_PLUGIN_PATH = "${qt5.qtbase.bin}/lib/qt-${qt5.qtbase.version}/plugins";
 
-      postBuild = lib.optionalString buildUserManual ''
-        make doc
-      '';
+      desktopItem = makeDesktopItem {
+        name = "rcu";
+        exec = "rcu";
+        icon = "rcu";
+        desktopName = "RCU";
+        genericName = "reMarkable Tablet Tool";
+        categories = "Graphics;Viewer;Utility;";
+      };
 
       postInstall = ''
         mkdir -p $out/share/applications
@@ -133,15 +137,6 @@ let
       '' + lib.optionalString buildUserManual ''
         install -D manual/manual.pdf $out/share/doc/rcu/manual.pdf
       '';
-
-      desktopItem = makeDesktopItem {
-        name = "rcu";
-        exec = "rcu";
-        icon = "rcu";
-        desktopName = "RCU";
-        genericName = "reMarkable Tablet Tool";
-        categories = "Graphics;Viewer;Utility;";
-      };
 
       meta = with lib; {
         homepage = "http://www.davisr.me/projects/rcu/";
