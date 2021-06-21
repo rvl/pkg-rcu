@@ -35,31 +35,15 @@ let
             You need to provide "--argstr productKey CODE" to the nix-build command-line.
           '';
 
+      patches = [ ./packages.patch ];
       postPatch = ''
-        # apply recommended directory naming conventions
+        # Apply recommended directory naming conventions
         mv src rcu
+        sed -i 's|src|rcu|g' Makefile rcu.py
 
-        # make an entrypoint
-        sed -i -e "s/if __name__ == '__main__'/def main()/" rcu/main.py
-
-        # create packages
-        touch rcu/__init__.py rcu/panes/deviceinfo/__init__.py
-
-        # make imports relative to the top-level rcu package
-        sed -i -e "s/^\([[:space:]]*\)import \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from . import \2/g" rcu/*.py
-        sed -i -e "s/^\([[:space:]]*\)import \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from .. import \2/g" rcu/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)import \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from ... import \2/g" rcu/*/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)import \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from .... import \2/g" rcu/*/*/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)from \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from .\2/g" rcu/*.py
-        sed -i -e "s/^\([[:space:]]*\)from \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from ..\2/g" rcu/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)from \(log\|svgtools\|worker\|model\|controllers\|panes\)/\1from ...\2/g" rcu/*/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)from \.rcu/\1from rcu.model.rcu/g" rcu/*/*.py
-        sed -i -e "s/^\([[:space:]]*\)from \./\1from ..panes/g" rcu/panes/__init__.py
-
+        # Add setuptools
         cp --no-preserve=all ${./setup.cfg} setup.cfg
         cp --no-preserve=all ${./pyproject.toml} pyproject.toml
-
-        sed -i 's|src/|rcu/|g' Makefile
       '';
 
       nativeBuildInputs = [
@@ -73,7 +57,7 @@ let
       ];
 
       buildInputs = [ pyside2-tools ];
- 
+
       propagatedBuildInputs = [
         xorg.libxcb
         xorg.xcbproto
@@ -96,7 +80,7 @@ let
 
       checkInputs = [ pytest ];
       doCheck = false;
-      
+
       # Prevents this error in the nix-shell:
       #   qt.qpa.plugin: Could not find the Qt platform plugin "xcb" in ""
       QT_QPA_PLATFORM_PLUGIN_PATH = "${qt5.qtbase.bin}/lib/qt-${qt5.qtbase.version}/plugins";
@@ -124,7 +108,7 @@ let
       postInstall = ''
         mkdir -p $out/share/applications
         cp -v $desktopItem/share/applications/* $out/share/applications
-        
+
         for size in 64 128 256 512; do
           name="''${size}x$size"
           target=$out/share/icons/hicolor/$name/apps

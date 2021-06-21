@@ -1,0 +1,786 @@
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/rcu.py rcu/rcu.py
+--- rcu.orig/rcu.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/rcu.py	2021-06-20 14:05:55.413146771 +1000
+@@ -0,0 +1,8 @@
++#!/usr/bin/env python3
++
++from src.main import main
++import os
++
++if __name__ == "__main__":
++   os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "src"))
++   main()
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/ConnectionDialogController.py rcu/src/controllers/ConnectionDialogController.py
+--- rcu.orig/src/controllers/ConnectionDialogController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/controllers/ConnectionDialogController.py	2021-06-21 13:32:50.202695013 +1000
+@@ -21,11 +21,11 @@
+ '''
+ 
+ import socket
+-from worker import Worker
++from ..worker import Worker
+ import sys
+ import pathlib
+-import controllers
+-import log
++from .. import controllers
++from .. import log
+ from PySide2.QtCore import Qt, QSettings, QObject, QEvent, QPoint, \
+     QCoreApplication
+ from PySide2.QtWidgets import QMenu, QShortcut, QApplication, QAction, \
+@@ -50,14 +50,14 @@
+             event.key() == Qt.Key_Enter):
+             self.parent().menu().defaultAction().trigger()
+         return QObject.eventFilter(self, obj, event)
+-        
++
+ 
+ 
+ 
+ class Preset:
+     def __init__(self, manager, adict=None):
+         self.manager = manager
+-        
++
+         if adict:
+             self.name = adict['name']
+             self.host = adict['host']
+@@ -87,7 +87,7 @@
+         # UI default state
+         self.action.setCheckable(True)
+         self.action.setChecked(False)
+-        
++
+     def clicked(self):
+         self.manager.switch_to(self)
+ 
+@@ -109,7 +109,7 @@
+         # GUI things for the menu
+         self.action.setChecked(False)
+         self.action.setEnabled(True)
+-                
++
+ class PresetManager:
+     def __init__(self, hostmenu, hostline, userline, passline):
+         self.hostmenu = hostmenu
+@@ -121,7 +121,7 @@
+         self.load_settings()
+ 
+         # hostline.textChanged.connect(lambda: print('hey'))
+-        
++
+     def add_new(self, pdict=None):
+         p = Preset(self, pdict)
+         if 0 >= len(self.presets):
+@@ -132,7 +132,7 @@
+                 p.action)
+         self.presets.append(p)
+         return p
+-    
++
+     def switch_to(self, presetb):
+         # switches to presetb
+         for p in self.presets:
+@@ -194,7 +194,7 @@
+             password = None
+             if QSettings().value('connection/pass'):
+                 password = QSettings().value('connection/pass')
+-            
++
+             log.info('no presets exist; migrating from old config')
+             settings = {'active': 0, 'presets': [{
+                 'name': 'Preset 1',
+@@ -224,10 +224,10 @@
+                 sav['active'] = i
+         QSettings().setValue('connection/presets', sav)
+ 
+-    
++
+ class ConnectionDialogController(controllers.UIController):
+-    ui_filename = pathlib.Path('views', 'ConnectionDialog.ui')
+-    
++    ui_filename = pathlib.Path('..', 'views', 'ConnectionDialog.ui')
++
+     def __init__(self, model, threadpool):
+         super(type(self), self).__init__(model, threadpool)
+ 
+@@ -259,7 +259,7 @@
+         save_btn.setMenu(self.preset_menu)
+         save_btn.installEventFilter(
+             OptionButtonEventFilter(self.window))
+-        
++
+ 
+         # For these, it would be better to search the QWidget for the
+         # default QPushButton. Shortcut: just use connect_btn
+@@ -294,7 +294,7 @@
+         else:
+             self.window.pass_lineEdit.setEchoMode(
+                 QLineEdit.Password)
+-        
++
+ 
+     def add_new_preset(self):
+         # This will add a new preset in the manager, and also refresh
+@@ -330,7 +330,7 @@
+ 
+     def get_preset_menu(self):
+         menu = QMenu()
+-        
++
+         # This loads menu entries for presets
+         self.presets = PresetManager(menu,
+                                      self.window.host_lineEdit,
+@@ -338,13 +338,13 @@
+                                      self.window.pass_lineEdit)
+         new = menu.addAction('Add new')
+         new.triggered.connect(self.add_new_preset)
+-        
++
+         menu.addSeparator()
+         rename = menu.addAction('Rename')
+         rename.triggered.connect(self.rename_current_preset)
+         save = menu.addAction('Save')
+         save.triggered.connect(self.save_config)
+-        
++
+         menu.addSeparator()
+         delete = menu.addAction('Delete')
+         delete.triggered.connect(self.delete_current_preset)
+@@ -369,7 +369,7 @@
+         controllers.RecoveryOSController(self.model, skip_windows=True)\
+                    .enter_recovery_mode(self.continue_loading,
+                                         load_info=True)
+-        
++
+     def fill_config(self):
+         # We want to fill the config prior to saving, but sometimes we
+         # want to make a connection without saving. This will just fill
+@@ -377,12 +377,12 @@
+         self.model.config.host = self.window.host_lineEdit.text()
+         self.model.config.user = self.window.user_lineEdit.text()
+         self.model.config.password = self.window.pass_lineEdit.text()
+-        
++
+     def save_config(self):
+         # Saves the current preset to settings file.
+         self.fill_config()
+         self.presets.save_current_preset()
+-        
++
+     def make_connection_async(self):
+         log.info('make_connection_async')
+         self.fill_config()
+@@ -400,7 +400,7 @@
+         self.window.save_pushButton.setEnabled(False)
+         self.window.showpass_checkBox.setEnabled(False)
+         self.cpbpretext = self.window.connect_pushButton.text()
+-        
++
+     def continue_loading(self, success=False):
+         # Success is disregarded, check for ourselves (it was just
+         # for compatibility)
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/ConnectionErrorController.py rcu/src/controllers/ConnectionErrorController.py
+--- rcu.orig/src/controllers/ConnectionErrorController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/controllers/ConnectionErrorController.py	2021-06-21 13:33:26.267869637 +1000
+@@ -24,8 +24,8 @@
+ import pathlib
+ 
+ class ConnectionErrorController(UIController):
+-    ui_filename = pathlib.PurePath('views', 'ConnectionError.ui')
+-    
++    ui_filename = pathlib.PurePath('..', 'views', 'ConnectionError.ui')
++
+     def __init__(self, parent_controller):
+         super(type(self), self).__init__(parent_controller.model,
+                                          parent_controller.threadpool)
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/ConnectionUtilityController.py rcu/src/controllers/ConnectionUtilityController.py
+--- rcu.orig/src/controllers/ConnectionUtilityController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/controllers/ConnectionUtilityController.py	2021-06-21 13:33:38.286924829 +1000
+@@ -23,10 +23,10 @@
+     QSettings
+ from PySide2.QtWidgets import QListWidgetItem, QShortcut, QApplication
+ from PySide2.QtGui import QKeySequence, QPalette
+-from controllers import UIController
+-from panes import paneslist, IncompatiblePane
++from ..controllers import UIController
++from ..panes import paneslist, IncompatiblePane
+ import pathlib
+-import log
++from .. import log
+ 
+ PANEROLE = 420
+ 
+@@ -49,8 +49,8 @@
+                 return False
+ 
+ class ConnectionUtilityController(UIController):
+-    ui_filename = pathlib.PurePath('views', 'ConnectionUtility.ui')
+-    
++    ui_filename = pathlib.PurePath('..', 'views', 'ConnectionUtility.ui')
++
+     def __init__(self, parent_controller):
+         super(type(self), self).__init__(parent_controller.model,
+                                          parent_controller.threadpool)
+@@ -112,7 +112,7 @@
+         quitshortcut.activated.connect(QApplication.instance().quit)
+         closeshortcut = QShortcut(QKeySequence.Close, self.window)
+         closeshortcut.activated.connect(QApplication.instance().quit)
+-        
++
+         self.window.show()
+ 
+     def pane_change(self, new=None):
+@@ -123,7 +123,7 @@
+             previous_pane = self.current_pane.data(PANEROLE)
+             layout.removeWidget(previous_pane.window)
+             previous_pane.window.hide()
+-        
++
+         # load new pane into frame
+         layout.addWidget(new_pane.window)
+         new_pane.window.show()
+@@ -148,7 +148,7 @@
+             newitem = QListWidgetItem(
+                 pane.get_icon(),
+                 pane.name)
+-            
++
+             # Check compatibility
+             no_compat_check = QCoreApplication.args.no_compat_check
+             if no_compat_check:
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/RecoveryOSController.py rcu/src/controllers/RecoveryOSController.py
+--- rcu.orig/src/controllers/RecoveryOSController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/controllers/RecoveryOSController.py	2021-06-21 13:33:45.694958126 +1000
+@@ -22,12 +22,12 @@
+ 
+ from . import UIController
+ import pathlib
+-import log
++from .. import log
+ from PySide2.QtCore import QTimer
+ 
+ class RecoveryOSController(UIController):
+-    ui_filename = pathlib.PurePath('views', 'RecoveryOS.ui')
+-    
++    ui_filename = pathlib.PurePath('..', 'views', 'RecoveryOS.ui')
++
+     def __init__(self, model, skip_windows=False):
+         super(type(self), self).__init__(model)
+         self.skip_windows = skip_windows
+@@ -84,6 +84,3 @@
+             QTimer.singleShot(30000, lambda: self.leave_stage_1(endcb))
+         else:
+             endcb(self.model.is_in_recovery)
+-
+-            
+-        
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/UIController.py rcu/src/controllers/UIController.py
+--- rcu.orig/src/controllers/UIController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/controllers/UIController.py	2021-06-21 13:26:54.209012900 +1000
+@@ -23,16 +23,16 @@
+ import sys
+ from PySide2.QtCore import QFile, QCoreApplication
+ from PySide2.QtUiTools import QUiLoader
+-import log
++from .. import log
+ import re
+ 
+ class UIController:
+     identity = ''
+     name = ''
+     ui_filename = ''
+-    # pyinstaller moves all datafiles into a tmp dir. This basepath
++    # This basepath
+     # can be overridden by a subclass, like third-party panes.
+-    ui_basepath = '.'
++    ui_basepath = pathlib.Path(__file__).parent
+     if hasattr(sys, '_MEIPASS'):
+         ui_basepath = sys._MEIPASS
+ 
+@@ -99,7 +99,7 @@
+             return False
+ 
+         return True
+-    
++
+     def __init__(self, model, threadpool=None):
+         self.model = model
+         self.threadpool = threadpool
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/__init__.py rcu/src/__init__.py
+--- rcu.orig/src/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/__init__.py	2021-06-21 13:09:45.263883658 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/main.py rcu/src/main.py
+--- rcu.orig/src/main.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/main.py	2021-06-21 13:25:24.189956555 +1000
+@@ -31,15 +31,12 @@
+     os.environ['QT_MAC_WANTS_LAYER'] = '1'
+ 
+ # Give these to all our children
+-global worker
+-import worker
+-global log
+-import log
+-global svgtools
+-import svgtools as svgtools
++from . import worker
++from . import log
++from . import svgtools
+ 
+-import model
+-from controllers import ConnectionDialogController
++from . import model
++from .controllers import ConnectionDialogController
+ from pathlib import Path
+ import sys
+ from PySide2.QtWidgets import QApplication, QStyleFactory
+@@ -68,7 +65,7 @@
+ args = parser.parse_args()
+ 
+ # Start main application
+-if __name__ == '__main__':
++def main():
+     QCoreApplication.setAttribute(Qt.AA_DisableWindowContextHelpButton)
+     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+     QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+@@ -81,7 +78,7 @@
+     QCoreApplication.args = args
+ 
+     # Version is now stored in version.txt
+-    ui_basepath = '.'
++    ui_basepath = Path(__file__).parent
+     if hasattr(sys, '_MEIPASS'):
+         ui_basepath = sys._MEIPASS
+     versiontxt = Path(Path(ui_basepath) / 'version.txt')
+@@ -121,7 +118,7 @@
+         QCoreApplication.sharePath = share_dir
+         QSettings().setValue('main/share_path', str(share_dir))
+     QCoreApplication.sharePath.mkdir(parents=True, exist_ok=True)
+-    
++
+     app = QApplication(sys.argv)
+ 
+     # Keep consistency across platforms
+@@ -171,9 +168,7 @@
+     app.setPalette(palette)
+ 
+     # The model and threadpool are distributed to all panes.
+-    model = model.RCU(QCoreApplication)
++    mdl = model.RCU(QCoreApplication)
+     threadpool = QThreadPool()
+-
+-    connection_dialog = ConnectionDialogController(model,
+-                                                   threadpool)
++    connection_dialog = ConnectionDialogController(mdl, threadpool)
+     sys.exit(app.exec_())
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/battery.py rcu/src/model/battery.py
+--- rcu.orig/src/model/battery.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/battery.py	2021-06-20 13:56:47.430451996 +1000
+@@ -19,7 +19,7 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
++from .. import log
+ import time
+ 
+ class Battery:
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/collection.py rcu/src/model/collection.py
+--- rcu.orig/src/model/collection.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/collection.py	2021-06-20 13:56:47.431451996 +1000
+@@ -19,7 +19,7 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
++from .. import log
+ from datetime import datetime
+ import uuid
+ import json
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/config.py rcu/src/model/config.py
+--- rcu.orig/src/model/config.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/config.py	2021-06-20 13:56:47.431451996 +1000
+@@ -21,7 +21,7 @@
+ '''
+ 
+ import paramiko
+-import log
++from .. import log
+ from pathlib import Path
+ import json
+ from .transport import Transport
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/display.py rcu/src/model/display.py
+--- rcu.orig/src/model/display.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/display.py	2021-06-20 13:56:47.431451996 +1000
+@@ -44,7 +44,7 @@
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ '''
+ 
+-import log
++from .. import log
+ from PySide2.QtCore import QByteArray, QBuffer, QIODevice
+ from PySide2.QtGui import QImage, QMatrix
+ import math
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/document.py rcu/src/model/document.py
+--- rcu.orig/src/model/document.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/document.py	2021-06-20 13:56:47.432451996 +1000
+@@ -19,15 +19,15 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
++from .. import log
+ import tempfile
+ from datetime import datetime
+ import tarfile
+ from pathlib import Path
+-from model.template import Template
++from ..model.template import Template
+ import uuid
+ import json
+-from model import lines
++from ..model import lines
+ import gc
+ import shutil
+ import time
+@@ -45,7 +45,7 @@
+ from pdfrw import PdfReader, PdfWriter, PageMerge, PdfDict, PdfArray, PdfName, \
+     IndirectPdfDict, uncompress, compress
+ 
+-import svgtools
++from .. import svgtools
+ 
+ def rmdir(path):
+     if path.is_file() and path.exists():
+@@ -535,7 +535,7 @@
+ 
+         # Load pencil textures (shared for brushes, takes a lot of time
+         # because there are many)
+-        from model.pens.textures import PencilTextures
++        from ..model.pens.textures import PencilTextures
+         pencil_textures = PencilTextures()
+ 
+         # Note: this is kind of hacky because it is a pseudo-
+@@ -1221,7 +1221,7 @@
+             layer.render_to_painter(painter, vector)
+ 
+             
+-from model.pens import *
++from ..model.pens import *
+ class DocumentPageLayer:
+     pen_widths = []
+ 
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/rcu.py rcu/src/model/rcu.py
+--- rcu.orig/src/model/rcu.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/rcu.py	2021-06-20 13:56:47.433451996 +1000
+@@ -20,11 +20,11 @@
+ '''
+ 
+ from .config import Config
+-import log
++from .. import log
+ 
+ from PySide2.QtCore import QThreadPool, QSettings, QTimer
+ from PySide2.QtGui import QImage
+-from worker import Worker
++from ..worker import Worker
+ import select
+ import base64
+ from .template import Template
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/template.py rcu/src/model/template.py
+--- rcu.orig/src/model/template.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/model/template.py	2021-06-20 13:56:47.433451996 +1000
+@@ -21,15 +21,15 @@
+ 
+ # These need to be cleaned up -- not all these imports are required
+ from pathlib import Path
+-import log
++from .. import log
+ import json
+ from PySide2.QtCore import QByteArray
+-from worker import Worker
++from ..worker import Worker
+ import tempfile
+ import uuid
+ import tarfile
+ import zipfile
+-import svgtools
++from .. import svgtools
+ import os
+ 
+ 
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/about/__init__.py rcu/src/panes/about/__init__.py
+--- rcu.orig/src/panes/about/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/about/__init__.py	2021-06-21 13:09:45.262883663 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/about/pane.py rcu/src/panes/about/pane.py
+--- rcu.orig/src/panes/about/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/about/pane.py	2021-06-20 13:56:44.358451636 +1000
+@@ -19,12 +19,12 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
++from ... import log
+ from pathlib import Path
+-from controllers import UIController
++from ...controllers import UIController
+ import sys
+ 
+-from worker import Worker
++from ...worker import Worker
+ 
+ from PySide2.QtCore import QByteArray, QUrl, QSize, QCoreApplication
+ from PySide2.QtGui import QIcon
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/backup/BackupController.py rcu/src/panes/deviceinfo/backup/BackupController.py
+--- rcu.orig/src/panes/deviceinfo/backup/BackupController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/deviceinfo/backup/BackupController.py	2021-06-20 13:56:34.651450504 +1000
+@@ -23,7 +23,7 @@
+ import tempfile
+ import pathlib
+ from pathlib import Path
+-import log
++from .... import log
+ from .Backup import Backup
+ import json
+ from datetime import datetime
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/backup/BackupFile.py rcu/src/panes/deviceinfo/backup/BackupFile.py
+--- rcu.orig/src/panes/deviceinfo/backup/BackupFile.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/deviceinfo/backup/BackupFile.py	2021-06-20 13:56:34.653450505 +1000
+@@ -23,7 +23,7 @@
+ 
+ import hashlib
+ from pathlib import Path
+-import log
++from .... import log
+ 
+ class BackupFile:
+     # This is a single file contined inside of a backup.
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/backup/Backup.py rcu/src/panes/deviceinfo/backup/Backup.py
+--- rcu.orig/src/panes/deviceinfo/backup/Backup.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/deviceinfo/backup/Backup.py	2021-06-20 13:56:34.653450505 +1000
+@@ -25,7 +25,7 @@
+ import datetime
+ import json
+ from pathlib import Path
+-import log
++from .... import log
+ import time
+ import platform
+ import base64
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/BatteryInfoController.py rcu/src/panes/deviceinfo/BatteryInfoController.py
+--- rcu.orig/src/panes/deviceinfo/BatteryInfoController.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/deviceinfo/BatteryInfoController.py	2021-06-20 13:56:44.358451636 +1000
+@@ -19,9 +19,9 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
++from ... import log
+ 
+-from controllers import UIController
++from ...controllers import UIController
+ from pathlib import Path
+ 
+ class BatteryInfoController(UIController):
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/__init__.py rcu/src/panes/deviceinfo/__init__.py
+--- rcu.orig/src/panes/deviceinfo/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/deviceinfo/__init__.py	2021-06-21 13:09:45.262883663 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/deviceinfo/pane.py rcu/src/panes/deviceinfo/pane.py
+--- rcu.orig/src/panes/deviceinfo/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/deviceinfo/pane.py	2021-06-20 13:56:44.359451637 +1000
+@@ -21,9 +21,9 @@
+ 
+ from pathlib import Path
+ import math
+-import controllers
+-import log
+-from worker import Worker
++from ... import controllers
++from ... import log
++from ...worker import Worker
+ from . import backup
+ from PySide2.QtWidgets import QInputDialog, QLineEdit, QMessageBox
+ from PySide2.QtGui import QIcon, QPixmap
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/display/__init__.py rcu/src/panes/display/__init__.py
+--- rcu.orig/src/panes/display/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/display/__init__.py	2021-06-21 13:09:45.263883658 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/display/pane.py rcu/src/panes/display/pane.py
+--- rcu.orig/src/panes/display/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/display/pane.py	2021-06-20 13:56:44.359451637 +1000
+@@ -24,9 +24,9 @@
+ from PySide2.QtWidgets import QFileDialog, QWidget
+ from pathlib import Path
+ from datetime import datetime
+-from controllers import UIController
+-from worker import Worker
+-import log
++from ...controllers import UIController
++from ...worker import Worker
++from ... import log
+ import gc
+ import ctypes
+ 
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/incompatible/__init__.py rcu/src/panes/incompatible/__init__.py
+--- rcu.orig/src/panes/incompatible/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/incompatible/__init__.py	2021-06-21 13:09:45.263883658 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/incompatible/pane.py rcu/src/panes/incompatible/pane.py
+--- rcu.orig/src/panes/incompatible/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/incompatible/pane.py	2021-06-20 13:56:44.359451637 +1000
+@@ -21,8 +21,8 @@
+ '''
+ 
+ from pathlib import Path
+-from controllers import UIController
+-import log
++from ...controllers import UIController
++from ... import log
+ from PySide2.QtGui import QPixmap
+ 
+ class IncompatiblePane(UIController):
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/notebooks/__init__.py rcu/src/panes/notebooks/__init__.py
+--- rcu.orig/src/panes/notebooks/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/notebooks/__init__.py	2021-06-21 13:09:45.262883663 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/notebooks/pane.py rcu/src/panes/notebooks/pane.py
+--- rcu.orig/src/panes/notebooks/pane.py	2021-02-01 09:36:00.000000000 +1000
++++ rcu/src/panes/notebooks/pane.py	2021-06-20 13:56:44.361451637 +1000
+@@ -19,11 +19,11 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-from controllers import UIController
++from ...controllers import UIController
+ from pathlib import Path
+-import log
+-from model.document import Document
+-from worker import Worker
++from ... import log
++from ...model.document import Document
++from ...worker import Worker
+ import json
+ from datetime import datetime
+ import platform
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/software/__init__.py rcu/src/panes/software/__init__.py
+--- rcu.orig/src/panes/software/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/software/__init__.py	2021-06-21 13:09:45.262883663 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/software/pane.py rcu/src/panes/software/pane.py
+--- rcu.orig/src/panes/software/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/software/pane.py	2021-06-20 13:56:44.361451637 +1000
+@@ -19,8 +19,8 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-import log
+-from controllers import UIController
++from ... import log
++from ...controllers import UIController
+ from pathlib import Path
+ from PySide2.QtCore import Qt, QSize, QRect, QSettings
+ from PySide2.QtGui import QIcon
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/splash/__init__.py rcu/src/panes/splash/__init__.py
+--- rcu.orig/src/panes/splash/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/splash/__init__.py	2021-06-21 13:09:45.263883658 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/splash/pane.py rcu/src/panes/splash/pane.py
+--- rcu.orig/src/panes/splash/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/splash/pane.py	2021-06-20 13:56:44.361451637 +1000
+@@ -24,8 +24,8 @@
+ from PySide2.QtWidgets import QFileDialog
+ from pathlib import Path
+ from datetime import datetime
+-import log
+-from controllers import UIController
++from ... import log
++from ...controllers import UIController
+ 
+ class ResizeEventFilter(QObject):
+     def eventFilter(self, obj, event):
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/templates/importcontroller.py rcu/src/panes/templates/importcontroller.py
+--- rcu.orig/src/panes/templates/importcontroller.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/templates/importcontroller.py	2021-06-20 13:56:44.362451637 +1000
+@@ -20,9 +20,9 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-from controllers import UIController
++from ...controllers import UIController
+ from pathlib import Path
+-import log
++from ... import log
+ 
+ from PySide2.QtCore import QByteArray, QSize, Qt, QTimer, QBuffer, \
+     QIODevice
+@@ -36,10 +36,10 @@
+ import io
+ import tempfile
+ 
+-from worker import Worker
+-import svgtools
++from ...worker import Worker
++from ... import svgtools
+ 
+-from model.template import Template
++from ...model.template import Template
+ 
+ 
+ def get_square_box(box):
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/templates/__init__.py rcu/src/panes/templates/__init__.py
+--- rcu.orig/src/panes/templates/__init__.py	1970-01-01 10:00:00.000000000 +1000
++++ rcu/src/panes/templates/__init__.py	2021-06-21 13:09:45.262883663 +1000
+@@ -0,0 +1 @@
++# __init__.py
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/templates/pane.py rcu/src/panes/templates/pane.py
+--- rcu.orig/src/panes/templates/pane.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/panes/templates/pane.py	2021-06-20 13:56:44.362451637 +1000
+@@ -19,9 +19,9 @@
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ '''
+ 
+-from controllers import UIController
++from ...controllers import UIController
+ from pathlib import Path
+-import log
++from ... import log
+ from PySide2.QtWidgets import QTreeWidgetItem, QTreeWidget, QMenu, \
+     QFrame, QAbstractItemView, QMessageBox, QHeaderView, QFileDialog, \
+     QSizePolicy
+@@ -29,11 +29,11 @@
+ from PySide2.QtCore import Qt, QRect, QByteArray, QSize, QObject, \
+     QEvent, QSettings
+ from PySide2.QtGui import QIcon
+-from model.template import Template
++from ...model.template import Template
+ import platform
+ import re
+ 
+-import svgtools
++from ... import svgtools
+ 
+ from .importcontroller import TemplateImporter
+ 
+diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/svgtools.py rcu/src/svgtools.py
+--- rcu.orig/src/svgtools.py	2021-02-01 06:56:15.000000000 +1000
++++ rcu/src/svgtools.py	2021-06-20 13:56:37.946450888 +1000
+@@ -23,7 +23,7 @@
+ from PySide2.QtGui import QImage, QPainter, QPixmap
+ from PySide2.QtSvg import QSvgRenderer
+ 
+-import log
++from . import log
+ 
+ import os
+ 
