@@ -26,6 +26,20 @@ To install it to your profile:
 $ ./nix-env -i ./result
 ```
 
+## Also build the user manual PDF
+
+Building of the user manual is disabled by default because it will
+pull in the rather large TexLive distribution as a dependency ...
+and the RCU author provides a PDF anyway.
+
+But you can enable `buildUserManual` if you like with:
+
+```shell
+$ nix-build --argstr productKey CODE --arg buildUserManual true
+```
+
+The manual PDF will be installed at `$prefix/share/doc/rcu`.
+
 ## Run from source with `nix-shell`
 
 To get a Python development environment with all necessary
