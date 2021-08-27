@@ -50,3 +50,41 @@ $ nix-shell --argstr productKey ""
 [nix-shell:~/src/pkg-rcu]$ cd ~/rcu-r2021-001/rcu/src
 [nix-shell:~/rcu-r2021-001/rcu/src]$ python main.py
 ```
+
+## Troubleshooting
+
+If the `rcu` executable from this package crashes, you may need to set
+up environment variables for QT5. Googling the error message from QT
+can often give some clues, or try the following tips.
+
+### QT Platform Plugins
+
+For this error message:
+
+```
+qt.qpa.plugin: Could not find the Qt platform plugin "xcb" in ""
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Fatal Python error: Aborted
+```
+
+Try setting:
+
+```bash
+export QT_QPA_PLATFORM=xcb
+```
+
+### XCB GL Integration
+
+For this error message:
+```
+qt.glx: qglx_findConfig: Failed to finding matching FBConfig for QSurfaceFormat(version 2.0, options QFlags<QSurfaceFormat::FormatOption>(), depthBufferSize -1, redBufferSize 1, greenBufferSize 1, blueBufferSize 1, alphaBufferSize -1, stencilBufferSize -1, samples -1, swapBehavior QSurfaceFormat::SingleBuffer, swapInterval 1, colorSpace QSurfaceFormat::DefaultColorSpace, profile  QSurfaceFormat::NoProfile)
+Could not initialize GLX
+Fatal Python error: Aborted
+```
+
+Try setting:
+
+```bash
+export QT_XCB_GL_INTEGRATION=none
+```

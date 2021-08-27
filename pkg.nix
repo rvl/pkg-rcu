@@ -85,9 +85,6 @@ in buildPythonApplication rec {
   # https://nixos.org/manual/nixpkgs/stable/#ssec-gnome-common-issues-double-wrapped
   dontWrapQtApps = true;
   preFixup = ''
-    # Wayland support is broken.
-    qtWrapperArgs+=(--set QT_QPA_PLATFORM xcb)
-
     # Add QT wrapper args to Python wrapper args
     makeWrapperArgs+=("''${qtWrapperArgs[@]}")
   '';
