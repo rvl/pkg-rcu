@@ -8,20 +8,17 @@
 # Supply --argstr productKey CODE to download
 , productKey ? null
 }:
-let
+
+buildPythonApplication rec {
   pname = "rcu";
   version = "r2021.001";
   name = "${pname}-${version}";
-  downloadUrl = code: "https://files.davisr.me/projects/rcu/download-${code}/release/${name}-source.tar.gz";
-
-in buildPythonApplication rec {
-  inherit pname version name;
 
   src = if productKey != null
     then
       fetchzip {
         name = "${pname}-source";
-        url = downloadUrl productKey;
+        url = "https://files.davisr.me/projects/rcu/download-${productKey}/release/${name}-source.tar.gz";
         sha256 = "1b8j41hz9k13dbs9hmmbif5w7m849wi3lk5hz3cjpcqcw6nj2sp0";
       }
     else
