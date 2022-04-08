@@ -63,15 +63,6 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/Connec
  class PresetManager:
      def __init__(self, hostmenu, hostline, userline, passline):
          self.hostmenu = hostmenu
-@@ -121,7 +121,7 @@
-         self.load_settings()
- 
-         # hostline.textChanged.connect(lambda: print('hey'))
--        
-+
-     def add_new(self, pdict=None):
-         p = Preset(self, pdict)
-         if 0 >= len(self.presets):
 @@ -132,7 +132,7 @@
                  p.action)
          self.presets.append(p)
@@ -180,48 +171,22 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/Connec
      def continue_loading(self, success=False):
          # Success is disregarded, check for ourselves (it was just
          # for compatibility)
-diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/ConnectionErrorController.py rcu/src/controllers/ConnectionErrorController.py
---- rcu.orig/src/controllers/ConnectionErrorController.py	2021-02-01 06:56:15.000000000 +1000
-+++ rcu/src/controllers/ConnectionErrorController.py	2021-06-21 13:33:26.267869637 +1000
-@@ -24,8 +24,8 @@
- import pathlib
- 
- class ConnectionErrorController(UIController):
--    ui_filename = pathlib.PurePath('views', 'ConnectionError.ui')
--    
-+    ui_filename = pathlib.PurePath('..', 'views', 'ConnectionError.ui')
-+
-     def __init__(self, parent_controller):
-         super(type(self), self).__init__(parent_controller.model,
-                                          parent_controller.threadpool)
 diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/ConnectionUtilityController.py rcu/src/controllers/ConnectionUtilityController.py
 --- rcu.orig/src/controllers/ConnectionUtilityController.py	2021-02-01 06:56:15.000000000 +1000
 +++ rcu/src/controllers/ConnectionUtilityController.py	2021-06-21 13:33:38.286924829 +1000
-@@ -23,10 +23,10 @@
-     QSettings
+@@ -24,9 +24,9 @@
  from PySide2.QtWidgets import QListWidgetItem, QShortcut, QApplication
- from PySide2.QtGui import QKeySequence, QPalette
+ from PySide2.QtGui import QKeySequence, QPalette, QPixmap
 -from controllers import UIController
 -from panes import paneslist, IncompatiblePane
 +from ..controllers import UIController
 +from ..panes import paneslist, IncompatiblePane
- import pathlib
+ from pathlib import Path
 -import log
 +from .. import log
  
  PANEROLE = 420
  
-@@ -49,8 +49,8 @@
-                 return False
- 
- class ConnectionUtilityController(UIController):
--    ui_filename = pathlib.PurePath('views', 'ConnectionUtility.ui')
--    
-+    ui_filename = pathlib.PurePath('..', 'views', 'ConnectionUtility.ui')
-+
-     def __init__(self, parent_controller):
-         super(type(self), self).__init__(parent_controller.model,
-                                          parent_controller.threadpool)
 @@ -112,7 +112,7 @@
          quitshortcut.activated.connect(QApplication.instance().quit)
          closeshortcut = QShortcut(QKeySequence.Close, self.window)
@@ -252,22 +217,6 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/Connec
 diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/controllers/RecoveryOSController.py rcu/src/controllers/RecoveryOSController.py
 --- rcu.orig/src/controllers/RecoveryOSController.py	2021-02-01 06:56:15.000000000 +1000
 +++ rcu/src/controllers/RecoveryOSController.py	2021-06-21 13:33:45.694958126 +1000
-@@ -22,12 +22,12 @@
- 
- from . import UIController
- import pathlib
--import log
-+from .. import log
- from PySide2.QtCore import QTimer
- 
- class RecoveryOSController(UIController):
--    ui_filename = pathlib.PurePath('views', 'RecoveryOS.ui')
--    
-+    ui_filename = pathlib.PurePath('..', 'views', 'RecoveryOS.ui')
-+
-     def __init__(self, model, skip_windows=False):
-         super(type(self), self).__init__(model)
-         self.skip_windows = skip_windows
 @@ -84,6 +84,3 @@
              QTimer.singleShot(30000, lambda: self.leave_stage_1(endcb))
          else:
@@ -315,8 +264,7 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/__init__.py rcu/sr
 diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/main.py rcu/src/main.py
 --- rcu.orig/src/main.py	2021-02-01 06:56:15.000000000 +1000
 +++ rcu/src/main.py	2021-06-21 13:25:24.189956555 +1000
-@@ -31,15 +31,12 @@
-     os.environ['QT_MAC_WANTS_LAYER'] = '1'
+@@ -38,11 +38,8 @@
  
  # Give these to all our children
 -global worker
@@ -331,11 +279,8 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/main.py rcu/src/ma
  
 -import model
 -from controllers import ConnectionDialogController
-+from . import model
++from .model import model
 +from .controllers import ConnectionDialogController
- from pathlib import Path
- import sys
- from PySide2.QtWidgets import QApplication, QStyleFactory
 @@ -68,7 +65,7 @@
  args = parser.parse_args()
  
@@ -363,14 +308,14 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/main.py rcu/src/ma
      app = QApplication(sys.argv)
  
      # Keep consistency across platforms
-@@ -171,9 +168,7 @@
+@@ -224,5 +224,5 @@
      app.setPalette(palette)
  
      # The model and threadpool are distributed to all panes.
 -    model = model.RCU(QCoreApplication)
 +    mdl = model.RCU(QCoreApplication)
      threadpool = QThreadPool()
--
+@@ -246,2 +246,1 @@
 -    connection_dialog = ConnectionDialogController(model,
 -                                                   threadpool)
 +    connection_dialog = ConnectionDialogController(mdl, threadpool)
@@ -446,8 +391,11 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/document.py 
  import shutil
  import time
 @@ -45,7 +45,7 @@
- from pdfrw import PdfReader, PdfWriter, PageMerge, PdfDict, PdfArray, PdfName, \
-     IndirectPdfDict, uncompress, compress
+ 
+-from pdfrw.pdfrw import PdfReader, PdfWriter, PageMerge, PdfDict, \
+-    PdfArray, PdfName, IndirectPdfDict, uncompress, compress
++from pdfrw import PdfReader, PdfWriter, PageMerge, PdfDict, \
++    PdfArray, PdfName, IndirectPdfDict, uncompress, compress
  
 -import svgtools
 +from .. import svgtools
@@ -655,7 +603,7 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/notebooks/__
 diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/notebooks/pane.py rcu/src/panes/notebooks/pane.py
 --- rcu.orig/src/panes/notebooks/pane.py	2021-02-01 09:36:00.000000000 +1000
 +++ rcu/src/panes/notebooks/pane.py	2021-06-20 13:56:44.361451637 +1000
-@@ -19,11 +19,11 @@
+@@ -19,12 +19,12 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  '''
  
@@ -664,9 +612,11 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/panes/notebooks/pa
  from pathlib import Path
 -import log
 -from model.document import Document
+-from model.collection import Collection
 -from worker import Worker
 +from ... import log
 +from ...model.document import Document
++from ...model.collection import Collection
 +from ...worker import Worker
  import json
  from datetime import datetime

@@ -11,7 +11,7 @@
 
 buildPythonApplication rec {
   pname = "rcu";
-  version = "r2021.001";
+  version = "r2021.002";
   name = "${pname}-${version}";
 
   src = if productKey != null
@@ -19,7 +19,7 @@ buildPythonApplication rec {
       fetchzip {
         name = "${pname}-source";
         url = "https://files.davisr.me/projects/rcu/download-${productKey}/release/${name}-source.tar.gz";
-        sha256 = "1b8j41hz9k13dbs9hmmbif5w7m849wi3lk5hz3cjpcqcw6nj2sp0";
+        sha256 = "0h4ahsbn1pw5850gbam0v2r75jimlvm0lbj9rz266xa952r8g28b";
       }
     else
       throw ''
