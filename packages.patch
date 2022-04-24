@@ -402,19 +402,16 @@ diff -Nur -x '*~' -x setup.cfg -x pyproject.toml rcu.orig/src/model/document.py 
  
  def rmdir(path):
      if path.is_file() and path.exists():
-@@ -535,7 +535,7 @@
+@@ -577,5 +577,5 @@
  
          # Load pencil textures (shared for brushes, takes a lot of time
          # because there are many)
 -        from model.pens.textures import PencilTextures
 +        from ..model.pens.textures import PencilTextures
          pencil_textures = PencilTextures()
- 
-         # Note: this is kind of hacky because it is a pseudo-
-@@ -1221,7 +1221,7 @@
-             layer.render_to_painter(painter, vector)
- 
-             
+@@ -1509,3 +1509,3 @@
+
+
 -from model.pens import *
 +from ..model.pens import *
  class DocumentPageLayer:
